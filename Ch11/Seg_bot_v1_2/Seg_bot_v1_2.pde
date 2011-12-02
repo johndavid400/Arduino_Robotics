@@ -1,12 +1,12 @@
-// DIY Seg-bot
-// JD Warren 2010
+// DIY Seg-bot - rev 1.2
+// JD Warren 2011 
 // Arduino Duemilanove (tested)
 // Sparkfun Razor 6 DOF IMU - only using X axis from accelerometer and gyroscope 
 // Steering potentiometer used to steer bot
 // Gain potentiometer used to set max speed (sensitivity) 
 // Engage switch (button) used to enable motors
 // 
-// In no way to I take responisibility for what you may do with this code! Use at your own risk.
+// In no way do I take responisibility for what you may do with this code! Use at your own risk.
 // Test thoroughly with wheels off the ground before attempting to ride - Wear a helmet!
 
 
@@ -44,12 +44,13 @@ float accel_scale = 0.01;
 
 // gyroscope values
 int gyro_offset = 391;
-int gyro_raw; 
+int gyro_raw;
 int gyro_reading;
 float gyro_rate;
 float gyro_scale = 0.025; // 0.01 by default
 float gyro_angle;
-float loop_time = 0.05;
+int loop_time = 50; // this is the loop time in milliseconds
+float loop_cycle = loop_time / 100; // this is the loop time / 100 to get the time in seconds
 
 // engage button variables
 int engage = false;
@@ -81,7 +82,7 @@ int gain_val;
 void setup(){
 
   // Start the Serial monitor at 9600bps
-  Serial.begin(9600); 
+  Serial.begin(9600);
   // define pinModes for tx and rx:
   pinMode(rxPin, INPUT);
   pinMode(txPin, OUTPUT);
@@ -100,13 +101,13 @@ void setup(){
 
 void loop(){
   // Start the loop by getting a reading from the Accelerometer and coverting it to an angle
-  sample_accel(); 
+  sample_accel();
   // now read the gyroscope to estimate the angle change
   sample_gyro();
   // combine the accel and gyro readings to come up with a "filtered" angle reading
   calculate_angle();
   // read the values of each potentiomoeter
-  read_pots(); 
+  read_pots();
   // make sure bot is level before activating the motors
   auto_level();
   // update the motors with the new values
@@ -136,7 +137,8 @@ void sample_gyro(){
   gyro_reading = analogRead(gyro_pin);
   gyro_raw = gyro_reading - gyro_offset;
   gyro_raw = constrain(gyro_raw, -391, 391);
-  gyro_rate = (float)(gyro_raw * gyro_scale) * -loop_time; 
+  // if when you tilt your Arduino/IMU, the gyro and accel readings go in opposite directions... change the loop_cycle variable to be negative or positive (opposite its current state)
+  gyro_rate = (float)(gyro_raw * gyro_scale) * -loop_cycle;
   gyro_angle = angle + gyro_rate;
 }
 
@@ -148,7 +150,7 @@ void read_pots(){
   // Read and convert potentiometer values
   // Steering potentiometer
   steer_reading = analogRead(steeringPot); // We want to coerce this into a range between -1 and 1, and set that to steer_val
-  steer_val = map(steer_reading, 0, 1023, steer_range, -steer_range); 
+  steer_val = map(steer_reading, 0, 1023, steer_range, -steer_range);
   if (angle == 0.00){
     gain_reading = 0;
   }
@@ -167,7 +169,7 @@ void auto_level(){
       engage = false;
     }
   }
-  else { 
+  else {
     if (engage == false){
       if (angle < 0.02 && angle > -0.02)
         engage = true;
@@ -176,9 +178,9 @@ void auto_level(){
       }
     }
     else {
-      engage = true;  
+      engage = true;
     }
-  }  
+  }
 
 }
 
@@ -188,14 +190,14 @@ void update_motor_speed(){
   if (engage == true){
     if (angle < -0.4 || angle > 0.4){
       motor_out = 0;
-    } 
+    }
     else {
       output = (angle * -1000); // convert float angle back to integer format
       motor_out = map(output, -250, 250, -gain_val, gain_val); // map the angle
     }
 
     // assign steering bias
-    motor_1_out = motor_out + (steer_val); 
+    motor_1_out = motor_out + (steer_val);
     motor_2_out = motor_out - (steer_val);
 
     // test for and correct invalid values
@@ -229,12 +231,12 @@ void update_motor_speed(){
 
 void time_stamp(){
   // check to make sure it has been exactly 50 milliseconds since the last recorded time-stamp 
-  while((millis() - last_cycle) < 50){
+  while((millis() - last_cycle) < loop_time){
     delay(1);
   }
   // once the loop cycle reaches 50 mS, reset timer value and proceed
   cycle_time = millis() - last_cycle;
-  last_cycle = millis(); 
+  last_cycle = millis();
 
 }
 
@@ -242,21 +244,21 @@ void time_stamp(){
 void serial_print_stuff(){
   // Debug with the Serial monitor
 
-  Serial.print("Accel: ");  
+  Serial.print("Accel: ");
   Serial.print(accel_angle);  // print the accelerometer angle
-  Serial.print("  ");   
+  Serial.print("  ");
 
-  Serial.print("Gyro: ");  
+  Serial.print("Gyro: ");
   Serial.print(gyro_angle);  // print the gyro angle
-  Serial.print("  ");    
+  Serial.print("  ");
 
-  Serial.print("Filtered: ");  
+  Serial.print("Filtered: ");
   Serial.print(angle);   // print the filtered angle
-  Serial.print("  "); 
+  Serial.print("  ");
 
   Serial.print(" time: ");
   Serial.print(cycle_time); // print the loop cycle time
-  Serial.println("    "); 
+  Serial.println("    ");
 
   /*
   
