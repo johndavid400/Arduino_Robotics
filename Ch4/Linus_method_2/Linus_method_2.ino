@@ -10,8 +10,8 @@
 // this code does NOT require the adafruit motor shield
 
 // servo motor declaration
-int servo_left(9);
-int servo_right(10);
+int servo_left = 9;
+int servo_right = 10;
 
 // Create variables for sensor readings
 
